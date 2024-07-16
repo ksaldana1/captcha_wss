@@ -1,10 +1,6 @@
 {
   "$schema": "https://www.partykit.io/schema.json",
-  "name": "test_pk",
+  "name": "test-pk",
   "main": "src/server.ts",
-  "compatibilityDate": "2024-07-16",
-  "serve": {
-    "path": "public",
-    "build": "src/client.ts"
-  }
+  "compatibilityDate": "2024-07-16"
 }

@@ -1,30 +1,98 @@
 import type * as Party from "partykit/server";
 
+import {
+  type Action,
+  type GameState,
+  type ServerAction,
+  gameUpdater,
+  initialGame,
+} from "./game/logic";
+
+export const PARTY_HOST = "https://test-pk.ksaldana1.partykit.dev";
+
+const CAPTCHA_GENERATOR_HOST = "http://captcha-server.fly.dev";
+
 export default class Server implements Party.Server {
-  constructor(readonly room: Party.Room) {}
+  // @ts-ignore
+  private gameState: GameState;
+  // current Captcha secret as plain text value
+  private secret: string = "";
+  // base64 string to send to user
+  // @ts-ignore
+  private base64Captcha: string = "";
 
-  onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
-    // A websocket just connected!
-    console.log(
-      `Connected:
-  id: ${conn.id}
-  room: ${this.room.id}
-  url: ${new URL(ctx.request.url).pathname}`
+  constructor(readonly room: Party.Room) {
+    this.gameState = initialGame("");
+    this.create();
+  }
+
+  async create() {
+    const response = await fetch(CAPTCHA_GENERATOR_HOST);
+    const { base64, value } = (await response.json()) as {
+      value: string;
+      base64: string;
+    };
+    this.secret = value;
+    this.base64Captcha = base64;
+
+    this.gameState = initialGame(base64, this.gameState.winner);
+    this.room.broadcast(JSON.stringify(this.gameState));
+  }
+
+  async onConnect(connection: Party.Connection, _ctx: Party.ConnectionContext) {
+    this.gameState = gameUpdater(
+      {
+        type: "USER_ENTERED",
+        user: { id: connection.id },
+        secret: this.secret,
+      },
+      this.gameState
     );
+    this.room.broadcast(JSON.stringify(this.gameState));
+  }
 
-    // let's send a message to the connection
-    conn.send("hello from server");
+  async onClose(connection: Party.Connection) {
+    this.gameState = gameUpdater(
+      {
+        type: "USER_EXIT",
+        user: { id: connection.id },
+        secret: this.secret,
+      },
+      this.gameState
+    );
+    this.room.broadcast(JSON.stringify(this.gameState));
   }
 
   onMessage(message: string, sender: Party.Connection) {
-    // let's log the message
-    console.log(`connection ${sender.id} sent message: ${message}`);
-    // as well as broadcast it to all the other connections in the room...
-    this.room.broadcast(
-      `${sender.id}: ${message}`,
-      // ...except for the connection it came from
-      [sender.id]
+    const action: ServerAction = {
+      ...(JSON.parse(message) as Action),
+      user: { id: sender.id },
+      secret: this.secret,
+    };
+    console.log(
+      `Received action ${action.type} from user ${sender.id}: ${JSON.stringify(
+        action
+      )}`
     );
+
+    if (action.type === "GUESS") {
+      const isCorrect = action.payload.captcha.value === this.secret;
+      if (isCorrect) {
+        this.create();
+        this.gameState = gameUpdater(
+          {
+            type: "DECLARE_WINNER",
+            payload: { user: sender.id },
+            user: { id: sender.id },
+            secret: this.secret,
+          },
+          this.gameState
+        );
+      }
+    } else {
+      this.gameState = gameUpdater(action, this.gameState);
+      this.room.broadcast(JSON.stringify(this.gameState));
+    }
   }
 }
 
