@@ -36,6 +36,7 @@ export default class Server implements Party.Server {
     this.base64Captcha = base64;
 
     this.gameState = initialGame(base64);
+    this.room.broadcast(JSON.stringify(this.gameState));
   }
 
   async newGame() {
