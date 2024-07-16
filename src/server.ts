@@ -35,8 +35,22 @@ export default class Server implements Party.Server {
     this.secret = value;
     this.base64Captcha = base64;
 
-    this.gameState = initialGame(base64, this.gameState.winner);
-    this.room.broadcast(JSON.stringify(this.gameState));
+    this.gameState = initialGame(base64);
+  }
+
+  async newGame() {
+    const response = await fetch(CAPTCHA_GENERATOR_HOST);
+    const { base64, value } = (await response.json()) as {
+      value: string;
+      base64: string;
+    };
+    this.secret = value;
+    this.base64Captcha = base64;
+
+    this.gameState = {
+      ...this.gameState,
+      captcha: base64,
+    };
   }
 
   async onConnect(connection: Party.Connection, _ctx: Party.ConnectionContext) {
@@ -78,7 +92,6 @@ export default class Server implements Party.Server {
     if (action.type === "GUESS") {
       const isCorrect = action.payload.captcha.value === this.secret;
       if (isCorrect) {
-        this.create();
         this.gameState = gameUpdater(
           {
             type: "DECLARE_WINNER",
@@ -88,11 +101,13 @@ export default class Server implements Party.Server {
           },
           this.gameState
         );
+        this.newGame();
       }
     } else {
       this.gameState = gameUpdater(action, this.gameState);
-      this.room.broadcast(JSON.stringify(this.gameState));
     }
+
+    this.room.broadcast(JSON.stringify(this.gameState));
   }
 }
 

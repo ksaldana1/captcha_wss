@@ -1,3 +1,4 @@
+import { produce } from "immer";
 const addLog = (message: string, logs: GameState["log"]): GameState["log"] => {
   return [{ dt: new Date().getTime(), message: message }, ...logs].slice(
     0,
@@ -24,6 +25,7 @@ export interface GameState {
   // currently the base64 string we are playing against
   captcha: string;
   winner?: string;
+  scoreboard: Record<string, number>;
   users: User[];
   log: {
     dt: number;
@@ -34,6 +36,7 @@ export interface GameState {
 export const initialGame = (captcha: string, winner?: string): GameState => ({
   captcha,
   winner,
+  scoreboard: {},
   users: [],
   log: addLog("Game Created!", []),
 });
@@ -72,10 +75,11 @@ export const gameUpdater = (
     }
 
     case "DECLARE_WINNER": {
-      return {
-        ...state,
-        winner: action.payload.user,
-      };
+      return produce(state, (draftState) => {
+        draftState.winner = action.payload.user;
+        draftState.scoreboard[action.payload.user] =
+          (draftState.scoreboard[action.payload.user] ?? 0) + 1;
+      });
     }
   }
 };
