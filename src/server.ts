@@ -52,6 +52,8 @@ export default class Server implements Party.Server {
       ...this.gameState,
       captcha: base64,
     };
+
+    this.room.broadcast(JSON.stringify(this.gameState));
   }
 
   async onConnect(connection: Party.Connection, _ctx: Party.ConnectionContext) {
@@ -106,9 +108,9 @@ export default class Server implements Party.Server {
       }
     } else {
       this.gameState = gameUpdater(action, this.gameState);
-    }
 
-    this.room.broadcast(JSON.stringify(this.gameState));
+      this.room.broadcast(JSON.stringify(this.gameState));
+    }
   }
 }
 
