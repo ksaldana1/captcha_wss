@@ -12,7 +12,7 @@ export const PARTY_HOST = "https://test-pk.ksaldana1.partykit.dev";
 
 // const CAPTCHA_GENERATOR_HOST = "http://captcha-server.fly.dev";
 const CAPTCHA_GENERATOR_HOST =
-  "https://3dd3-23-136-216-2.ngrok-free.app/captcha";
+  "https://3dd3-23-136-216-2.ngrok-free.app/captcha/random";
 
 const CAPTCHA_ADDRESS = () => {
   const suffix = Math.random() >= 0.5 ? "image" : "audio";
@@ -34,7 +34,7 @@ export default class Server implements Party.Server {
   }
 
   async create() {
-    const response = await fetch(CAPTCHA_ADDRESS());
+    const response = await fetch(CAPTCHA_GENERATOR_HOST);
     const { base64, value, type } = (await response.json()) as {
       value: string;
       base64: string;
@@ -53,7 +53,7 @@ export default class Server implements Party.Server {
   }
 
   async newGame() {
-    const response = await fetch(CAPTCHA_ADDRESS());
+    const response = await fetch(CAPTCHA_GENERATOR_HOST);
     const { base64, value, type } = (await response.json()) as {
       value: string;
       base64: string;
