@@ -10,7 +10,9 @@ import {
 
 export const PARTY_HOST = "https://test-pk.ksaldana1.partykit.dev";
 
-const CAPTCHA_GENERATOR_HOST = "http://captcha-server.fly.dev";
+// const CAPTCHA_GENERATOR_HOST = "http://captcha-server.fly.dev";
+const CAPTCHA_GENERATOR_HOST =
+  "https://3dd3-23-136-216-2.ngrok-free.app/captcha/audio";
 
 export default class Server implements Party.Server {
   // @ts-ignore
@@ -28,14 +30,20 @@ export default class Server implements Party.Server {
 
   async create() {
     const response = await fetch(CAPTCHA_GENERATOR_HOST);
-    const { base64, value } = (await response.json()) as {
+    const { base64, value, type } = (await response.json()) as {
       value: string;
       base64: string;
+      type: string;
     };
     this.secret = value;
     this.base64Captcha = base64;
 
     this.gameState = initialGame(base64);
+    this.gameState = {
+      ...this.gameState,
+      // @ts-ignore
+      captcha_type: type,
+    };
     this.room.broadcast(JSON.stringify(this.gameState));
   }
 

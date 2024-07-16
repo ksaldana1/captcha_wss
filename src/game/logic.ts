@@ -24,6 +24,7 @@ export type DefaultAction = { type: "USER_ENTERED" } | { type: "USER_EXIT" };
 export interface GameState {
   // currently the base64 string we are playing against
   captcha: string;
+  captcha_type?: "image" | "audio";
   winner?: string;
   scoreboard: Record<string, number>;
   users: User[];
